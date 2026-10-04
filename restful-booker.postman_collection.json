@@ -1,0 +1,5128 @@
+{
+	"info": {
+		"_postman_id": "5b0c6f53-2a4e-4c35-9a59-8f0e6f1f2b7d",
+		"name": "Restful Booker API — тест-кейсы",
+		"description": "Позитивные и негативные проверки REST API https://restful-booker.herokuapp.com\n(документация: https://restful-booker.herokuapp.com/apidoc/index.html).\n\nИмена запросов совпадают с ID в test-cases.xlsx. Тесты проверяют корректное поведение по документации\nи семантике HTTP, поэтому на известных багах они падают: имя такой проверки начинается с [BUG-XX] —\nномер бага в bug-report.xlsx.\n\nКаждый запрос самодостаточен: нужные бронь и токен создаются в pre-request скриптах папок,\nпоэтому любой запрос можно отправить отдельно, а всю коллекцию — запустить через Runner или Newman.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "/ping (GET)",
+			"description": "Проверка доступности сервиса.",
+			"item": [
+				{
+					"name": "TC-PING-01 Проверка доступности сервиса (health check)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-19] Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Время ответа < 2000 мс\", () => {",
+									"    pm.expect(pm.response.responseTime).to.be.below(2000);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/ping",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ping"
+							]
+						},
+						"description": "**Позитивный кейс.** Проверка доступности сервиса (health check)\n\n**Предусловия:** —\n\n**Ожидаемый результат:** Код ответа 200 OK. Время ответа < 2 с\n\n**Баг:** BUG-19 (см. bug-report.xlsx). Фактически: Код ответа 201 Created, тело «Created». Время ответа ≈ 0,7 с"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PING-02 Запрос к /ping неподдерживаемым методом POST",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 404 или 405\", () => {",
+									"    pm.expect(pm.response.code).to.be.oneOf([404,405]);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/ping",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"ping"
+							]
+						},
+						"description": "**Негативный кейс.** Запрос к /ping неподдерживаемым методом POST\n\n**Предусловия:** —\n\n**Ожидаемый результат:** Код ответа 404 Not Found или 405 Method Not Allowed\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "/auth (POST)",
+			"description": "Получение токена авторизации.",
+			"item": [
+				{
+					"name": "TC-AUTH-01 Получение токена с валидными учётными данными",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"В ответе непустой token (строка)\", () => {",
+									"    const token = pm.response.json().token;",
+									"    pm.expect(token).to.be.a(\"string\").and.not.empty;",
+									"    pm.collectionVariables.set(\"token\", token);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth"
+							]
+						},
+						"description": "**Позитивный кейс.** Получение токена с валидными учётными данными\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 200 OK; Content-Type: application/json; в теле поле token — непустая строка\n\n**Статус последнего прогона:** Passed",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{username}}\",\n    \"password\": \"{{password}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-AUTH-02 Неверный пароль",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-12] Код ответа 401\", () => {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test(\"Токен не выдаётся\", () => {",
+									"    pm.expect(pm.response.text()).to.not.include(\"token\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth"
+							]
+						},
+						"description": "**Негативный кейс.** Неверный пароль\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 401 Unauthorized; токен не выдаётся\n\n**Баг:** BUG-12 (см. bug-report.xlsx). Фактически: 200 OK; {\"reason\": \"Bad credentials\"}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{username}}\",\n    \"password\": \"wrong\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-AUTH-03 Несуществующий пользователь",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-12] Код ответа 401\", () => {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test(\"Токен не выдаётся\", () => {",
+									"    pm.expect(pm.response.text()).to.not.include(\"token\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth"
+							]
+						},
+						"description": "**Негативный кейс.** Несуществующий пользователь\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 401 Unauthorized; токен не выдаётся\n\n**Баг:** BUG-12 (см. bug-report.xlsx). Фактически: 200 OK; {\"reason\": \"Bad credentials\"}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"nouser\",\n    \"password\": \"{{password}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-AUTH-04 Пустое тело запроса",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-13] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Токен не выдаётся\", () => {",
+									"    pm.expect(pm.response.text()).to.not.include(\"token\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth"
+							]
+						},
+						"description": "**Негативный кейс.** Пустое тело запроса\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; токен не выдаётся\n\n**Баг:** BUG-13 (см. bug-report.xlsx). Фактически: 200 OK; {\"reason\": \"Bad credentials\"}",
+						"body": {
+							"mode": "raw",
+							"raw": "{}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-AUTH-05 Отсутствует поле password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-13] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Токен не выдаётся\", () => {",
+									"    pm.expect(pm.response.text()).to.not.include(\"token\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth"
+							]
+						},
+						"description": "**Негативный кейс.** Отсутствует поле password\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; токен не выдаётся\n\n**Баг:** BUG-13 (см. bug-report.xlsx). Фактически: 200 OK; {\"reason\": \"Bad credentials\"}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"{{username}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-AUTH-06 Пустые строки в username и password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-13] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Токен не выдаётся\", () => {",
+									"    pm.expect(pm.response.text()).to.not.include(\"token\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth"
+							]
+						},
+						"description": "**Негативный кейс.** Пустые строки в username и password\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; токен не выдаётся\n\n**Баг:** BUG-13 (см. bug-report.xlsx). Фактически: 200 OK; {\"reason\": \"Bad credentials\"}",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"username\": \"\",\n    \"password\": \"\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-AUTH-07 Невалидный JSON в теле запроса",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/auth",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"auth"
+							]
+						},
+						"description": "**Негативный кейс.** Невалидный JSON в теле запроса\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request\n\n**Статус последнего прогона:** Passed",
+						"body": {
+							"mode": "raw",
+							"raw": "{\"username\": \"admin\",",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "/booking (POST)",
+			"description": "Создание брони.",
+			"item": [
+				{
+					"name": "TC-CREATE-01 Создание брони со всеми полями",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const sent = JSON.parse(pm.request.body.raw);",
+									"",
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"Тело соответствует JSON-схеме: bookingid + booking\", () => {",
+									"    pm.response.to.have.jsonSchema({",
+									"        type: \"object\",",
+									"        required: [\"bookingid\", \"booking\"],",
+									"        properties: {",
+									"            bookingid: { type: \"integer\" },",
+									"            booking: JSON.parse(pm.collectionVariables.get(\"bookingSchema\"))",
+									"        }",
+									"    });",
+									"});",
+									"",
+									"pm.test(\"Данные брони в ответе совпадают с отправленными\", () => {",
+									"    pm.expect(pm.response.json().booking).to.eql(sent);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.response.json().bookingid,",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"GET /booking/{id} возвращает те же данные\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(sent);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Позитивный кейс.** Создание брони со всеми полями\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 200 OK; Content-Type: application/json; в ответе bookingid (число) и booking, совпадающий с отправленными данными; GET /booking/{bookingid} возвращает те же данные\n\n**Статус последнего прогона:** Passed",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 150,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-02 Создание брони без необязательного поля additionalneeds",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const sent = JSON.parse(pm.request.body.raw);",
+									"",
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"Тело соответствует JSON-схеме: bookingid + booking\", () => {",
+									"    pm.response.to.have.jsonSchema({",
+									"        type: \"object\",",
+									"        required: [\"bookingid\", \"booking\"],",
+									"        properties: {",
+									"            bookingid: { type: \"integer\" },",
+									"            booking: JSON.parse(pm.collectionVariables.get(\"bookingSchema\"))",
+									"        }",
+									"    });",
+									"});",
+									"",
+									"pm.test(\"Данные брони в ответе совпадают с отправленными\", () => {",
+									"    pm.expect(pm.response.json().booking).to.eql(sent);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.response.json().bookingid,",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"GET /booking/{id} возвращает те же данные\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(sent);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Позитивный кейс.** Создание брони без необязательного поля additionalneeds\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 200 OK; бронь создана без additionalneeds, остальные поля совпадают с отправленными\n\n**Статус последнего прогона:** Passed",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 150,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-03 Кириллица в текстовых полях",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const sent = JSON.parse(pm.request.body.raw);",
+									"",
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"Тело соответствует JSON-схеме: bookingid + booking\", () => {",
+									"    pm.response.to.have.jsonSchema({",
+									"        type: \"object\",",
+									"        required: [\"bookingid\", \"booking\"],",
+									"        properties: {",
+									"            bookingid: { type: \"integer\" },",
+									"            booking: JSON.parse(pm.collectionVariables.get(\"bookingSchema\"))",
+									"        }",
+									"    });",
+									"});",
+									"",
+									"pm.test(\"Данные брони в ответе совпадают с отправленными\", () => {",
+									"    pm.expect(pm.response.json().booking).to.eql(sent);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.response.json().bookingid,",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"GET /booking/{id} возвращает те же данные\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(sent);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Позитивный кейс.** Кириллица в текстовых полях\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 200 OK; текстовые поля сохранены без искажений\n\n**Статус последнего прогона:** Passed",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Иван\",\n    \"lastname\": \"Петров\",\n    \"totalprice\": 150,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Завтрак\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-04 Граничные значения: totalprice = 0, depositpaid = false",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const sent = JSON.parse(pm.request.body.raw);",
+									"",
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"Тело соответствует JSON-схеме: bookingid + booking\", () => {",
+									"    pm.response.to.have.jsonSchema({",
+									"        type: \"object\",",
+									"        required: [\"bookingid\", \"booking\"],",
+									"        properties: {",
+									"            bookingid: { type: \"integer\" },",
+									"            booking: JSON.parse(pm.collectionVariables.get(\"bookingSchema\"))",
+									"        }",
+									"    });",
+									"});",
+									"",
+									"pm.test(\"Данные брони в ответе совпадают с отправленными\", () => {",
+									"    pm.expect(pm.response.json().booking).to.eql(sent);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.response.json().bookingid,",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"GET /booking/{id} возвращает те же данные\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(sent);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Позитивный кейс.** Граничные значения: totalprice = 0, depositpaid = false\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 200 OK; totalprice = 0, depositpaid = false\n\n**Статус последнего прогона:** Passed",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 0,\n    \"depositpaid\": false,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-05 Дробная стоимость totalprice = 150.75",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const sent = JSON.parse(pm.request.body.raw);",
+									"",
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"[BUG-08] totalprice = 150.75 в ответе\", () => {",
+									"    pm.expect(pm.response.json().booking.totalprice).to.eql(150.75);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.response.json().bookingid,",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"[BUG-08] GET /booking/{id} возвращает те же данные\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(sent);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Позитивный кейс.** Дробная стоимость totalprice = 150.75\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 200 OK; totalprice = 150.75 (в документации тип Number)\n\n**Баг:** BUG-08 (см. bug-report.xlsx). Фактически: 200 OK; totalprice = 150 — дробная часть отброшена",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 150.75,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-06 Создание брони в формате XML",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"[BUG-20] Content-Type — application/xml\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/xml\");",
+									"});",
+									"",
+									"pm.test(\"Тело — XML <created-booking> с bookingid и данными брони\", () => {",
+									"    const created = xml2Json(pm.response.text())[\"created-booking\"];",
+									"    pm.expect(Number(created.bookingid)).to.be.above(0);",
+									"    pm.expect(created.booking.firstname).to.eql(\"Ivan\");",
+									"    pm.expect(created.booking.bookingdates.checkout).to.eql(\"2031-03-15\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "text/xml"
+							},
+							{
+								"key": "Accept",
+								"value": "application/xml"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Позитивный кейс.** Создание брони в формате XML\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 200 OK; Content-Type: application/xml; тело — XML <created-booking> с bookingid и данными брони\n\n**Баг:** BUG-20 (см. bug-report.xlsx). Фактически: 200 OK; XML-тело корректное, но Content-Type: text/html",
+						"body": {
+							"mode": "raw",
+							"raw": "<booking>\n    <firstname>Ivan</firstname>\n    <lastname>Petrov</lastname>\n    <totalprice>150</totalprice>\n    <depositpaid>true</depositpaid>\n    <bookingdates>\n        <checkin>2031-03-10</checkin>\n        <checkout>2031-03-15</checkout>\n    </bookingdates>\n    <additionalneeds>Breakfast</additionalneeds>\n</booking>",
+							"options": {
+								"raw": {
+									"language": "xml"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-07 Ответ в формате x-www-form-urlencoded",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"[BUG-21] Content-Type — application/x-www-form-urlencoded\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/x-www-form-urlencoded\");",
+									"});",
+									"",
+									"pm.test(\"[BUG-21] Тело — bookingid и данные брони в формате urlencoded\", () => {",
+									"    pm.expect(pm.response.text()).to.match(/bookingid=\\d+/);",
+									"    pm.expect(pm.response.text()).to.include(\"firstname%5D=Ivan\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/x-www-form-urlencoded"
+							},
+							{
+								"key": "Accept",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Позитивный кейс.** Ответ в формате x-www-form-urlencoded\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 200 OK; Content-Type: application/x-www-form-urlencoded; тело — bookingid и данные брони в формате urlencoded (как в примере документации)\n\n**Баг:** BUG-21 (см. bug-report.xlsx). Фактически: 200 OK; Content-Type: text/html; тело «formurlencoded is not a function»",
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{
+									"key": "firstname",
+									"value": "Ivan",
+									"type": "text"
+								},
+								{
+									"key": "lastname",
+									"value": "Petrov",
+									"type": "text"
+								},
+								{
+									"key": "totalprice",
+									"value": "150",
+									"type": "text"
+								},
+								{
+									"key": "depositpaid",
+									"value": "true",
+									"type": "text"
+								},
+								{
+									"key": "bookingdates[checkin]",
+									"value": "2031-03-10",
+									"type": "text"
+								},
+								{
+									"key": "bookingdates[checkout]",
+									"value": "2031-03-15",
+									"type": "text"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-08 Пустое тело запроса",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-03] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** Пустое тело запроса\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; бронь не создаётся\n\n**Баг:** BUG-03 (см. bug-report.xlsx). Фактически: 500 Internal Server Error",
+						"body": {
+							"mode": "raw",
+							"raw": "{}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-09 Отсутствует обязательное поле firstname",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-03] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** Отсутствует обязательное поле firstname\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; бронь не создаётся\n\n**Баг:** BUG-03 (см. bug-report.xlsx). Фактически: 500 Internal Server Error",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 150,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-10 Отсутствует обязательный объект bookingdates",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-03] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** Отсутствует обязательный объект bookingdates\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; бронь не создаётся\n\n**Баг:** BUG-03 (см. bug-report.xlsx). Фактически: 500 Internal Server Error",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 150,\n    \"depositpaid\": true,\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-11 firstname — число вместо строки",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-03] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** firstname — число вместо строки\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; бронь не создаётся\n\n**Баг:** BUG-03 (см. bug-report.xlsx). Фактически: 500 Internal Server Error",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": 123,\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 150,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-12 totalprice — нечисловая строка",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-07] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** totalprice — нечисловая строка\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; бронь не создаётся\n\n**Баг:** BUG-07 (см. bug-report.xlsx). Фактически: 200 OK; бронь создана с totalprice = null",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": \"abc\",\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-13 Отрицательная стоимость totalprice",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-09] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** Отрицательная стоимость totalprice\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; бронь не создаётся\n\n**Баг:** BUG-09 (см. bug-report.xlsx). Фактически: 200 OK; бронь создана с totalprice = -100",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": -100,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-14 depositpaid — строка вместо boolean",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-10] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** depositpaid — строка вместо boolean\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; бронь не создаётся\n\n**Баг:** BUG-10 (см. bug-report.xlsx). Фактически: 200 OK; строка приведена к depositpaid = true",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 150,\n    \"depositpaid\": \"yes\",\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-15 Пустые firstname и lastname",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-11] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** Пустые firstname и lastname\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; бронь не создаётся\n\n**Баг:** BUG-11 (см. bug-report.xlsx). Фактически: 200 OK; бронь создана с пустыми именем и фамилией",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"\",\n    \"lastname\": \"\",\n    \"totalprice\": 150,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-16 Дата выезда раньше даты заезда",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-06] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** Дата выезда раньше даты заезда\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; бронь не создаётся\n\n**Баг:** BUG-06 (см. bug-report.xlsx). Фактически: 200 OK; бронь создана с checkout < checkin",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 150,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-15\",\n        \"checkout\": \"2031-03-10\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-17 Невалидная дата заезда",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-04] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** Невалидная дата заезда\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; бронь не создаётся\n\n**Баг:** BUG-04 (см. bug-report.xlsx). Фактически: 200 OK; бронь создана с checkin = \"0NaN-aN-aN\"",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 150,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"not-a-date\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-18 Несуществующая дата заезда (30 февраля)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-05] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** Несуществующая дата заезда (30 февраля)\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request; бронь не создаётся\n\n**Баг:** BUG-05 (см. bug-report.xlsx). Фактически: 200 OK; дата молча заменена на checkin = \"2031-03-02\"",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 150,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-02-30\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-19 Невалидный JSON в теле запроса",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** Невалидный JSON в теле запроса\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request\n\n**Статус последнего прогона:** Passed",
+						"body": {
+							"mode": "raw",
+							"raw": "{\"firstname\": \"Ivan\",",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-20 Неподдерживаемый Content-Type: text/plain",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-23] Код ответа 415\", () => {",
+									"    pm.response.to.have.status(415);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "text/plain"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** Неподдерживаемый Content-Type: text/plain\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 415 Unsupported Media Type; бронь не создаётся\n\n**Баг:** BUG-23 (см. bug-report.xlsx). Фактически: 500 Internal Server Error",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 150,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "text"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-CREATE-21 Неподдерживаемый формат ответа Accept: text/html",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-22] Код ответа 406\", () => {",
+									"    pm.response.to.have.status(406);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "text/html"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Негативный кейс.** Неподдерживаемый формат ответа Accept: text/html\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 406 Not Acceptable\n\n**Баг:** BUG-22 (см. bug-report.xlsx). Фактически: 418 I'm a Teapot",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ivan\",\n    \"lastname\": \"Petrov\",\n    \"totalprice\": 150,\n    \"depositpaid\": true,\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-10\",\n        \"checkout\": \"2031-03-15\"\n    },\n    \"additionalneeds\": \"Breakfast\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "/booking с параметрами (GET)",
+			"description": "Поиск броней по firstname, lastname, checkin, checkout. Перед каждым запросом создаётся бронь с уникальными именем и фамилией.",
+			"item": [
+				{
+					"name": "TC-SEARCH-01 Получение списка всех броней без фильтров",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"Ответ — массив объектов вида {bookingid: <число>}\", () => {",
+									"    const list = pm.response.json();",
+									"    pm.expect(list).to.be.an(\"array\").that.is.not.empty;",
+									"    list.forEach((item) => pm.expect(item.bookingid).to.be.a(\"number\"));",
+									"});",
+									"",
+									"pm.test(\"Созданная бронь есть в результатах\", () => {",
+									"    const ids = pm.response.json().map((item) => item.bookingid);",
+									"    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"bookingId\")));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							]
+						},
+						"description": "**Позитивный кейс.** Получение списка всех броней без фильтров\n\n**Предусловия:** Создана бронь с уникальными firstname / lastname (например, Qa<случайное число> / Tester<случайное число>), checkin = 2031-03-10, checkout = 2031-03-15; её id сохранён\n\n**Ожидаемый результат:** 200 OK; Content-Type: application/json; массив объектов вида {\"bookingid\": <число>}; созданная бронь в списке\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-02 Поиск по firstname",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Созданная бронь есть в результатах\", () => {",
+									"    const ids = pm.response.json().map((item) => item.bookingid);",
+									"    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"bookingId\")));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?firstname={{searchFirstname}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "firstname",
+									"value": "{{searchFirstname}}"
+								}
+							]
+						},
+						"description": "**Позитивный кейс.** Поиск по firstname\n\n**Предусловия:** Создана бронь с уникальными firstname / lastname (например, Qa<случайное число> / Tester<случайное число>), checkin = 2031-03-10, checkout = 2031-03-15; её id сохранён\n\n**Ожидаемый результат:** 200 OK; id созданной брони есть в результатах\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-03 Поиск по lastname",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Созданная бронь есть в результатах\", () => {",
+									"    const ids = pm.response.json().map((item) => item.bookingid);",
+									"    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"bookingId\")));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?lastname={{searchLastname}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "lastname",
+									"value": "{{searchLastname}}"
+								}
+							]
+						},
+						"description": "**Позитивный кейс.** Поиск по lastname\n\n**Предусловия:** Создана бронь с уникальными firstname / lastname (например, Qa<случайное число> / Tester<случайное число>), checkin = 2031-03-10, checkout = 2031-03-15; её id сохранён\n\n**Ожидаемый результат:** 200 OK; id созданной брони есть в результатах\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-04 Поиск по firstname и lastname",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Созданная бронь есть в результатах\", () => {",
+									"    const ids = pm.response.json().map((item) => item.bookingid);",
+									"    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"bookingId\")));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?firstname={{searchFirstname}}&lastname={{searchLastname}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "firstname",
+									"value": "{{searchFirstname}}"
+								},
+								{
+									"key": "lastname",
+									"value": "{{searchLastname}}"
+								}
+							]
+						},
+						"description": "**Позитивный кейс.** Поиск по firstname и lastname\n\n**Предусловия:** Создана бронь с уникальными firstname / lastname (например, Qa<случайное число> / Tester<случайное число>), checkin = 2031-03-10, checkout = 2031-03-15; её id сохранён\n\n**Ожидаемый результат:** 200 OK; id созданной брони есть в результатах\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-05 Фильтр checkin, равный дате заезда брони",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"[BUG-14] Бронь найдена: её checkin = заданной дате (по документации ≥)\", () => {",
+									"    const ids = pm.response.json().map((item) => item.bookingid);",
+									"    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"bookingId\")));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?firstname={{searchFirstname}}&checkin=2031-03-10",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "firstname",
+									"value": "{{searchFirstname}}"
+								},
+								{
+									"key": "checkin",
+									"value": "2031-03-10"
+								}
+							]
+						},
+						"description": "**Позитивный кейс.** Фильтр checkin, равный дате заезда брони\n\n**Предусловия:** Создана бронь с уникальными firstname / lastname (например, Qa<случайное число> / Tester<случайное число>), checkin = 2031-03-10, checkout = 2031-03-15; её id сохранён\n\n**Ожидаемый результат:** 200 OK; id созданной брони есть в результатах (по документации checkin ≥ заданной даты)\n\n**Баг:** BUG-14 (см. bug-report.xlsx). Фактически: 200 OK; [] — бронь не найдена: фильтр работает как строгое «>»"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-06 Фильтр checkin раньше даты заезда брони",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Созданная бронь есть в результатах\", () => {",
+									"    const ids = pm.response.json().map((item) => item.bookingid);",
+									"    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"bookingId\")));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?firstname={{searchFirstname}}&checkin=2031-03-09",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "firstname",
+									"value": "{{searchFirstname}}"
+								},
+								{
+									"key": "checkin",
+									"value": "2031-03-09"
+								}
+							]
+						},
+						"description": "**Позитивный кейс.** Фильтр checkin раньше даты заезда брони\n\n**Предусловия:** Создана бронь с уникальными firstname / lastname (например, Qa<случайное число> / Tester<случайное число>), checkin = 2031-03-10, checkout = 2031-03-15; её id сохранён\n\n**Ожидаемый результат:** 200 OK; id созданной брони есть в результатах\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-07 Фильтр checkin позже даты заезда брони",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Созданной брони нет в результатах\", () => {",
+									"    const ids = pm.response.json().map((item) => item.bookingid);",
+									"    pm.expect(ids).to.not.include(Number(pm.collectionVariables.get(\"bookingId\")));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?firstname={{searchFirstname}}&checkin=2031-03-11",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "firstname",
+									"value": "{{searchFirstname}}"
+								},
+								{
+									"key": "checkin",
+									"value": "2031-03-11"
+								}
+							]
+						},
+						"description": "**Позитивный кейс.** Фильтр checkin позже даты заезда брони\n\n**Предусловия:** Создана бронь с уникальными firstname / lastname (например, Qa<случайное число> / Tester<случайное число>), checkin = 2031-03-10, checkout = 2031-03-15; её id сохранён\n\n**Ожидаемый результат:** 200 OK; id созданной брони нет в результатах\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-08 Фильтр checkout, равный дате выезда брони",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Созданная бронь есть в результатах\", () => {",
+									"    const ids = pm.response.json().map((item) => item.bookingid);",
+									"    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"bookingId\")));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?firstname={{searchFirstname}}&checkout=2031-03-15",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "firstname",
+									"value": "{{searchFirstname}}"
+								},
+								{
+									"key": "checkout",
+									"value": "2031-03-15"
+								}
+							]
+						},
+						"description": "**Позитивный кейс.** Фильтр checkout, равный дате выезда брони\n\n**Предусловия:** Создана бронь с уникальными firstname / lastname (например, Qa<случайное число> / Tester<случайное число>), checkin = 2031-03-10, checkout = 2031-03-15; её id сохранён\n\n**Ожидаемый результат:** 200 OK; id созданной брони есть в результатах\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-09 Фильтр checkout раньше даты выезда брони",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"[BUG-15] Бронь найдена: её checkout (2031-03-15) ≥ заданной даты\", () => {",
+									"    const ids = pm.response.json().map((item) => item.bookingid);",
+									"    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"bookingId\")));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?firstname={{searchFirstname}}&checkout=2031-03-14",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "firstname",
+									"value": "{{searchFirstname}}"
+								},
+								{
+									"key": "checkout",
+									"value": "2031-03-14"
+								}
+							]
+						},
+						"description": "**Позитивный кейс.** Фильтр checkout раньше даты выезда брони\n\n**Предусловия:** Создана бронь с уникальными firstname / lastname (например, Qa<случайное число> / Tester<случайное число>), checkin = 2031-03-10, checkout = 2031-03-15; её id сохранён\n\n**Ожидаемый результат:** 200 OK; id созданной брони есть в результатах (по документации checkout ≥ заданной даты: 2031-03-15 ≥ 2031-03-14)\n\n**Баг:** BUG-15 (см. bug-report.xlsx). Фактически: 200 OK; [] — бронь не найдена"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-10 Фильтр checkout позже даты выезда брони",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"[BUG-15] Бронь не найдена: её checkout (2031-03-15) < заданной даты\", () => {",
+									"    const ids = pm.response.json().map((item) => item.bookingid);",
+									"    pm.expect(ids).to.not.include(Number(pm.collectionVariables.get(\"bookingId\")));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?firstname={{searchFirstname}}&checkout=2031-03-16",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "firstname",
+									"value": "{{searchFirstname}}"
+								},
+								{
+									"key": "checkout",
+									"value": "2031-03-16"
+								}
+							]
+						},
+						"description": "**Позитивный кейс.** Фильтр checkout позже даты выезда брони\n\n**Предусловия:** Создана бронь с уникальными firstname / lastname (например, Qa<случайное число> / Tester<случайное число>), checkin = 2031-03-10, checkout = 2031-03-15; её id сохранён\n\n**Ожидаемый результат:** 200 OK; id созданной брони нет в результатах (2031-03-15 < 2031-03-16)\n\n**Баг:** BUG-15 (см. bug-report.xlsx). Фактически: 200 OK; бронь найдена — фильтр работает как «checkout ≤ заданной даты»"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-11 Все параметры поиска одновременно",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"[BUG-14] Созданная бронь есть в результатах\", () => {",
+									"    const ids = pm.response.json().map((item) => item.bookingid);",
+									"    pm.expect(ids).to.include(Number(pm.collectionVariables.get(\"bookingId\")));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?firstname={{searchFirstname}}&lastname={{searchLastname}}&checkin=2031-03-10&checkout=2031-03-15",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "firstname",
+									"value": "{{searchFirstname}}"
+								},
+								{
+									"key": "lastname",
+									"value": "{{searchLastname}}"
+								},
+								{
+									"key": "checkin",
+									"value": "2031-03-10"
+								},
+								{
+									"key": "checkout",
+									"value": "2031-03-15"
+								}
+							]
+						},
+						"description": "**Позитивный кейс.** Все параметры поиска одновременно\n\n**Предусловия:** Создана бронь с уникальными firstname / lastname (например, Qa<случайное число> / Tester<случайное число>), checkin = 2031-03-10, checkout = 2031-03-15; её id сохранён\n\n**Ожидаемый результат:** 200 OK; id созданной брони есть в результатах\n\n**Баг:** BUG-14 (см. bug-report.xlsx). Фактически: 200 OK; [] — бронь не найдена"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-12 Поиск по несуществующему имени",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Пустой массив в ответе\", () => {",
+									"    pm.expect(pm.response.json()).to.be.an(\"array\").that.is.empty;",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?firstname=NoSuchName{{$timestamp}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "firstname",
+									"value": "NoSuchName{{$timestamp}}"
+								}
+							]
+						},
+						"description": "**Негативный кейс.** Поиск по несуществующему имени\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 200 OK; пустой массив []\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-13 Верное firstname и неверное lastname",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Пустой массив в ответе\", () => {",
+									"    pm.expect(pm.response.json()).to.be.an(\"array\").that.is.empty;",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?firstname={{searchFirstname}}&lastname=WrongLastname",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "firstname",
+									"value": "{{searchFirstname}}"
+								},
+								{
+									"key": "lastname",
+									"value": "WrongLastname"
+								}
+							]
+						},
+						"description": "**Негативный кейс.** Верное firstname и неверное lastname\n\n**Предусловия:** Создана бронь с уникальными firstname / lastname (например, Qa<случайное число> / Tester<случайное число>), checkin = 2031-03-10, checkout = 2031-03-15; её id сохранён\n\n**Ожидаемый результат:** 200 OK; пустой массив []\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-14 Невалидный формат даты в checkin",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-16] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?checkin=not-a-date",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "checkin",
+									"value": "not-a-date"
+								}
+							]
+						},
+						"description": "**Негативный кейс.** Невалидный формат даты в checkin\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request\n\n**Баг:** BUG-16 (см. bug-report.xlsx). Фактически: 500 Internal Server Error"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-SEARCH-15 Несуществующая дата в checkout",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-16] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking?checkout=2031-13-45",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking"
+							],
+							"query": [
+								{
+									"key": "checkout",
+									"value": "2031-13-45"
+								}
+							]
+						},
+						"description": "**Негативный кейс.** Несуществующая дата в checkout\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 400 Bad Request\n\n**Баг:** BUG-16 (см. bug-report.xlsx). Фактически: 500 Internal Server Error"
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Предусловие: бронь с уникальными firstname / lastname, checkin = 2031-03-10, checkout = 2031-03-15",
+							"const booking = (() => {",
+							"    const suffix = Date.now().toString(36) + Math.floor(Math.random() * 10000);",
+							"    return {",
+							"        firstname: \"Qa\" + suffix,",
+							"        lastname: \"Tester\" + suffix,",
+							"        totalprice: 100,",
+							"        depositpaid: true,",
+							"        bookingdates: { checkin: \"2031-03-10\", checkout: \"2031-03-15\" }",
+							"    };",
+							"})();",
+							"pm.sendRequest({",
+							"    url: pm.variables.get(\"baseUrl\") + \"/booking\",",
+							"    method: \"POST\",",
+							"    header: { \"Content-Type\": \"application/json\", Accept: \"application/json\" },",
+							"    body: { mode: \"raw\", raw: JSON.stringify(booking) }",
+							"}, (err, res) => {",
+							"    if (err || res.code !== 200) {",
+							"        throw new Error(\"Предусловие: не удалось создать бронь — \" + (err || res.code));",
+							"    }",
+							"    pm.collectionVariables.set(\"bookingId\", res.json().bookingid);",
+							"    pm.collectionVariables.set(\"bookingData\", JSON.stringify(booking));",
+							"    pm.collectionVariables.set(\"searchFirstname\", booking.firstname);",
+							"    pm.collectionVariables.set(\"searchLastname\", booking.lastname);",
+							"});"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "/booking/:id (GET)",
+			"description": "Получение брони по id. Перед каждым запросом создаётся новая бронь.",
+			"item": [
+				{
+					"name": "TC-GET-01 Получение брони по id в формате JSON",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"Тело соответствует JSON-схеме брони\", () => {",
+									"    pm.response.to.have.jsonSchema(JSON.parse(pm.collectionVariables.get(\"bookingSchema\")));",
+									"});",
+									"",
+									"pm.test(\"Данные совпадают с созданной бронью\", () => {",
+									"    pm.expect(pm.response.json()).to.eql(original);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Получение брони по id в формате JSON\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 200 OK; Content-Type: application/json; тело соответствует схеме (firstname, lastname, totalprice, depositpaid, bookingdates.checkin/checkout, additionalneeds) и данным созданной брони\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-GET-02 Получение брони без заголовка Accept",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"Данные совпадают с созданной бронью\", () => {",
+									"    pm.expect(pm.response.json()).to.eql(original);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Получение брони без заголовка Accept\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 200 OK; ответ в JSON (формат по умолчанию)\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-GET-03 Получение брони в формате XML",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"[BUG-20] Content-Type — application/xml\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/xml\");",
+									"});",
+									"",
+									"pm.test(\"Тело — XML <booking> с данными брони\", () => {",
+									"    const booking = xml2Json(pm.response.text()).booking;",
+									"    pm.expect(booking.firstname).to.eql(\"Ivan\");",
+									"    pm.expect(booking.bookingdates.checkin).to.eql(\"2031-03-10\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/xml"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Получение брони в формате XML\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 200 OK; Content-Type: application/xml; тело — XML <booking> с данными брони\n\n**Баг:** BUG-20 (см. bug-report.xlsx). Фактически: 200 OK; XML-тело корректное, но Content-Type: text/html"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-GET-04 Получение брони в формате x-www-form-urlencoded",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"[BUG-21] Content-Type — application/x-www-form-urlencoded\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/x-www-form-urlencoded\");",
+									"});",
+									"",
+									"pm.test(\"[BUG-21] Тело — данные брони в формате urlencoded\", () => {",
+									"    pm.expect(pm.response.text()).to.include(\"firstname=Ivan\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/x-www-form-urlencoded"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Получение брони в формате x-www-form-urlencoded\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 200 OK; Content-Type: application/x-www-form-urlencoded; тело — данные брони в формате urlencoded\n\n**Баг:** BUG-21 (см. bug-report.xlsx). Фактически: 200 OK; Content-Type: text/html; тело «formurlencoded is not a function»"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-GET-05 Несуществующий id",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 404\", () => {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/99999999",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"99999999"
+							]
+						},
+						"description": "**Негативный кейс.** Несуществующий id\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 404 Not Found\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-GET-06 Нечисловой id",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 404\", () => {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/abc",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"abc"
+							]
+						},
+						"description": "**Негативный кейс.** Нечисловой id\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 404 Not Found\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-GET-07 Отрицательный id",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 404\", () => {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/-1",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"-1"
+							]
+						},
+						"description": "**Негативный кейс.** Отрицательный id\n\n**Предусловия:** —\n\n**Ожидаемый результат:** 404 Not Found\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-GET-08 Неподдерживаемый формат ответа Accept: text/html",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-22] Код ответа 406\", () => {",
+									"    pm.response.to.have.status(406);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "text/html"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Неподдерживаемый формат ответа Accept: text/html\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 406 Not Acceptable\n\n**Баг:** BUG-22 (см. bug-report.xlsx). Фактически: 418 I'm a Teapot"
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Предусловие: новая бронь перед каждым запросом папки",
+							"const booking = {",
+							"    \"firstname\": \"Ivan\",",
+							"    \"lastname\": \"Petrov\",",
+							"    \"totalprice\": 150,",
+							"    \"depositpaid\": true,",
+							"    \"bookingdates\": {",
+							"        \"checkin\": \"2031-03-10\",",
+							"        \"checkout\": \"2031-03-15\"",
+							"    },",
+							"    \"additionalneeds\": \"Breakfast\"",
+							"};",
+							"pm.sendRequest({",
+							"    url: pm.variables.get(\"baseUrl\") + \"/booking\",",
+							"    method: \"POST\",",
+							"    header: { \"Content-Type\": \"application/json\", Accept: \"application/json\" },",
+							"    body: { mode: \"raw\", raw: JSON.stringify(booking) }",
+							"}, (err, res) => {",
+							"    if (err || res.code !== 200) {",
+							"        throw new Error(\"Предусловие: не удалось создать бронь — \" + (err || res.code));",
+							"    }",
+							"    pm.collectionVariables.set(\"bookingId\", res.json().bookingid);",
+							"    pm.collectionVariables.set(\"bookingData\", JSON.stringify(booking));",
+							"});"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "/booking/:id (PUT)",
+			"description": "Полное обновление брони. Перед каждым запросом создаётся новая бронь и запрашивается токен.",
+			"item": [
+				{
+					"name": "TC-PUT-01 Полное обновление брони с токеном в Cookie",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const sent = JSON.parse(pm.request.body.raw);",
+									"",
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"Тело ответа совпадает с ожидаемыми данными брони\", () => {",
+									"    pm.expect(pm.response.json()).to.eql(sent);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"GET возвращает обновлённые данные\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(sent);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Полное обновление брони с токеном в Cookie\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 200 OK; тело ответа совпадает с отправленными данными; GET возвращает обновлённые данные\n\n**Статус последнего прогона:** Passed",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Petr\",\n    \"lastname\": \"Sidorov\",\n    \"totalprice\": 300,\n    \"depositpaid\": false,\n    \"bookingdates\": {\n        \"checkin\": \"2031-04-01\",\n        \"checkout\": \"2031-04-10\"\n    },\n    \"additionalneeds\": \"Dinner\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PUT-02 Полное обновление брони с Basic-авторизацией",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const sent = JSON.parse(pm.request.body.raw);",
+									"",
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"Тело ответа совпадает с ожидаемыми данными брони\", () => {",
+									"    pm.expect(pm.response.json()).to.eql(sent);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"GET возвращает обновлённые данные\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(sent);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Полное обновление брони с Basic-авторизацией\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 200 OK; тело ответа совпадает с отправленными данными; GET возвращает обновлённые данные\n\n**Статус последнего прогона:** Passed",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{username}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{password}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Petr\",\n    \"lastname\": \"Sidorov\",\n    \"totalprice\": 300,\n    \"depositpaid\": false,\n    \"bookingdates\": {\n        \"checkin\": \"2031-04-01\",\n        \"checkout\": \"2031-04-10\"\n    },\n    \"additionalneeds\": \"Dinner\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PUT-03 Обновление без необязательного поля additionalneeds",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const sent = JSON.parse(pm.request.body.raw);",
+									"",
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"[BUG-24] В ответе нет additionalneeds — ресурс заменён целиком\", () => {",
+									"    pm.expect(pm.response.json()).to.eql(sent);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"[BUG-24] GET: additionalneeds отсутствует\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(sent);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Обновление без необязательного поля additionalneeds\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 200 OK; additionalneeds отсутствует в ответе и в GET (PUT заменяет ресурс целиком)\n\n**Баг:** BUG-24 (см. bug-report.xlsx). Фактически: 200 OK; additionalneeds = \"Breakfast\" осталось от прежней версии брони",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Petr\",\n    \"lastname\": \"Sidorov\",\n    \"totalprice\": 300,\n    \"depositpaid\": false,\n    \"bookingdates\": {\n        \"checkin\": \"2031-04-01\",\n        \"checkout\": \"2031-04-10\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PUT-04 Обновление без авторизации",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"Код ответа 403\", () => {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Обновление без авторизации\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 403 Forbidden; бронь не изменилась (GET возвращает исходные данные)\n\n**Статус последнего прогона:** Passed",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Petr\",\n    \"lastname\": \"Sidorov\",\n    \"totalprice\": 300,\n    \"depositpaid\": false,\n    \"bookingdates\": {\n        \"checkin\": \"2031-04-01\",\n        \"checkout\": \"2031-04-10\"\n    },\n    \"additionalneeds\": \"Dinner\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PUT-05 Невалидный токен",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"Код ответа 403\", () => {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token=invalidtoken123"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Невалидный токен\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 403 Forbidden; бронь не изменилась (GET возвращает исходные данные)\n\n**Статус последнего прогона:** Passed",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Petr\",\n    \"lastname\": \"Sidorov\",\n    \"totalprice\": 300,\n    \"depositpaid\": false,\n    \"bookingdates\": {\n        \"checkin\": \"2031-04-01\",\n        \"checkout\": \"2031-04-10\"\n    },\n    \"additionalneeds\": \"Dinner\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PUT-06 Неверные данные Basic-авторизации",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"Код ответа 403\", () => {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Неверные данные Basic-авторизации\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 403 Forbidden; бронь не изменилась (GET возвращает исходные данные)\n\n**Статус последнего прогона:** Passed",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "wrong",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "wrong",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Petr\",\n    \"lastname\": \"Sidorov\",\n    \"totalprice\": 300,\n    \"depositpaid\": false,\n    \"bookingdates\": {\n        \"checkin\": \"2031-04-01\",\n        \"checkout\": \"2031-04-10\"\n    },\n    \"additionalneeds\": \"Dinner\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PUT-07 Отсутствуют обязательные поля",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Отсутствуют обязательные поля\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 400 Bad Request; бронь не изменилась (GET возвращает исходные данные)\n\n**Статус последнего прогона:** Passed",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"OnlyName\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PUT-08 Обновление несуществующей брони",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-17] Код ответа 404\", () => {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/99999999",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"99999999"
+							]
+						},
+						"description": "**Негативный кейс.** Обновление несуществующей брони\n\n**Предусловия:** Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 404 Not Found\n\n**Баг:** BUG-17 (см. bug-report.xlsx). Фактически: 405 Method Not Allowed",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Petr\",\n    \"lastname\": \"Sidorov\",\n    \"totalprice\": 300,\n    \"depositpaid\": false,\n    \"bookingdates\": {\n        \"checkin\": \"2031-04-01\",\n        \"checkout\": \"2031-04-10\"\n    },\n    \"additionalneeds\": \"Dinner\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PUT-09 Дата выезда раньше даты заезда",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"[BUG-06] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"[BUG-06] Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Дата выезда раньше даты заезда\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 400 Bad Request; бронь не изменилась (GET возвращает исходные данные)\n\n**Баг:** BUG-06 (см. bug-report.xlsx). Фактически: 200 OK; бронь обновлена с checkout < checkin",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Petr\",\n    \"lastname\": \"Sidorov\",\n    \"totalprice\": 300,\n    \"depositpaid\": false,\n    \"bookingdates\": {\n        \"checkin\": \"2031-04-10\",\n        \"checkout\": \"2031-04-01\"\n    },\n    \"additionalneeds\": \"Dinner\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PUT-10 totalprice — нечисловая строка",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"[BUG-07] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"[BUG-07] Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** totalprice — нечисловая строка\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 400 Bad Request; бронь не изменилась (GET возвращает исходные данные)\n\n**Баг:** BUG-07 (см. bug-report.xlsx). Фактически: 200 OK; totalprice = null",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Petr\",\n    \"lastname\": \"Sidorov\",\n    \"totalprice\": \"abc\",\n    \"depositpaid\": false,\n    \"bookingdates\": {\n        \"checkin\": \"2031-04-01\",\n        \"checkout\": \"2031-04-10\"\n    },\n    \"additionalneeds\": \"Dinner\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PUT-11 Невалидная дата заезда",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"[BUG-04] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"[BUG-04] Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Невалидная дата заезда\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 400 Bad Request; бронь не изменилась (GET возвращает исходные данные)\n\n**Баг:** BUG-04 (см. bug-report.xlsx). Фактически: 200 OK; checkin = \"0NaN-aN-aN\"",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Petr\",\n    \"lastname\": \"Sidorov\",\n    \"totalprice\": 300,\n    \"depositpaid\": false,\n    \"bookingdates\": {\n        \"checkin\": \"not-a-date\",\n        \"checkout\": \"2031-04-10\"\n    },\n    \"additionalneeds\": \"Dinner\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PUT-12 Поле bookingid в теле запроса",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Свободный id, который подставляется в поле bookingid тела запроса",
+									"pm.variables.set(\"targetBookingId\", 1000000000 + Math.floor(Math.random() * 100000000));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-01] Код ответа 200 или 400\", () => {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200,400]);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"[BUG-01] Бронь доступна по исходному id (GET → 200)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"    });",
+									"});",
+									"",
+									"// Уборка: бронь, «переехавшую» на targetBookingId, удаляем",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.variables.get(\"targetBookingId\"),",
+									"    method: \"DELETE\",",
+									"    header: { Authorization: \"Basic \" + btoa(pm.variables.get(\"username\") + \":\" + pm.variables.get(\"password\")) }",
+									"}, () => {});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Поле bookingid в теле запроса\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 400 Bad Request либо поле bookingid игнорируется; id брони не меняется, бронь доступна по исходному id\n\n**Баг:** BUG-01 (см. bug-report.xlsx). Фактически: 405 Method Not Allowed, но изменение применено: по исходному id 404, бронь доступна по id из тела. Если этот id занят — две брони с одним id, одна из них недоступна",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Petr\",\n    \"lastname\": \"Sidorov\",\n    \"totalprice\": 300,\n    \"depositpaid\": false,\n    \"bookingdates\": {\n        \"checkin\": \"2031-04-01\",\n        \"checkout\": \"2031-04-10\"\n    },\n    \"additionalneeds\": \"Dinner\",\n    \"bookingid\": {{targetBookingId}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PUT-13 Невалидный JSON в теле запроса",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Невалидный JSON в теле запроса\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 400 Bad Request; бронь не изменилась (GET возвращает исходные данные)\n\n**Статус последнего прогона:** Passed",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\"firstname\": \"Petr\",",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Предусловие: новая бронь перед каждым запросом папки",
+							"const booking = {",
+							"    \"firstname\": \"Ivan\",",
+							"    \"lastname\": \"Petrov\",",
+							"    \"totalprice\": 150,",
+							"    \"depositpaid\": true,",
+							"    \"bookingdates\": {",
+							"        \"checkin\": \"2031-03-10\",",
+							"        \"checkout\": \"2031-03-15\"",
+							"    },",
+							"    \"additionalneeds\": \"Breakfast\"",
+							"};",
+							"pm.sendRequest({",
+							"    url: pm.variables.get(\"baseUrl\") + \"/booking\",",
+							"    method: \"POST\",",
+							"    header: { \"Content-Type\": \"application/json\", Accept: \"application/json\" },",
+							"    body: { mode: \"raw\", raw: JSON.stringify(booking) }",
+							"}, (err, res) => {",
+							"    if (err || res.code !== 200) {",
+							"        throw new Error(\"Предусловие: не удалось создать бронь — \" + (err || res.code));",
+							"    }",
+							"    pm.collectionVariables.set(\"bookingId\", res.json().bookingid);",
+							"    pm.collectionVariables.set(\"bookingData\", JSON.stringify(booking));",
+							"});",
+							"",
+							"// Предусловие: свежий токен авторизации",
+							"pm.sendRequest({",
+							"    url: pm.variables.get(\"baseUrl\") + \"/auth\",",
+							"    method: \"POST\",",
+							"    header: { \"Content-Type\": \"application/json\" },",
+							"    body: {",
+							"        mode: \"raw\",",
+							"        raw: JSON.stringify({ username: pm.variables.get(\"username\"), password: pm.variables.get(\"password\") })",
+							"    }",
+							"}, (err, res) => {",
+							"    if (err || !res.json().token) {",
+							"        throw new Error(\"Предусловие: не удалось получить токен\");",
+							"    }",
+							"    pm.collectionVariables.set(\"token\", res.json().token);",
+							"});"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "/booking/:id (PATCH)",
+			"description": "Частичное обновление брони. Перед каждым запросом создаётся новая бронь и запрашивается токен.",
+			"item": [
+				{
+					"name": "TC-PATCH-01 Изменение firstname с токеном в Cookie",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"Тело ответа совпадает с ожидаемыми данными брони\", () => {",
+									"    pm.expect(pm.response.json()).to.eql(Object.assign(JSON.parse(pm.collectionVariables.get(\"bookingData\")), { firstname: \"Patched\" }));",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"GET возвращает обновлённые данные\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(Object.assign(JSON.parse(pm.collectionVariables.get(\"bookingData\")), { firstname: \"Patched\" }));",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Изменение firstname с токеном в Cookie\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 200 OK; firstname = Patched, остальные поля без изменений (в ответе и в GET)\n\n**Статус последнего прогона:** Passed",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Patched\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PATCH-02 Изменение totalprice и depositpaid с Basic-авторизацией",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"Тело ответа совпадает с ожидаемыми данными брони\", () => {",
+									"    pm.expect(pm.response.json()).to.eql(Object.assign(JSON.parse(pm.collectionVariables.get(\"bookingData\")), { totalprice: 999, depositpaid: false }));",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"GET возвращает обновлённые данные\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(Object.assign(JSON.parse(pm.collectionVariables.get(\"bookingData\")), { totalprice: 999, depositpaid: false }));",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Изменение totalprice и depositpaid с Basic-авторизацией\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 200 OK; totalprice = 999, depositpaid = false, остальные поля без изменений\n\n**Статус последнего прогона:** Passed",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{username}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{password}}",
+									"type": "string"
+								}
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"totalprice\": 999,\n    \"depositpaid\": false\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PATCH-03 Изменение только даты заезда",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"checkin = 2031-03-12\", () => {",
+									"    pm.expect(pm.response.json().bookingdates.checkin).to.eql(\"2031-03-12\");",
+									"});",
+									"",
+									"pm.test(\"[BUG-02] checkout не изменился (2031-03-15)\", () => {",
+									"    pm.expect(pm.response.json().bookingdates.checkout).to.eql(\"2031-03-15\");",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"[BUG-02] GET: изменён только checkin\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(Object.assign(JSON.parse(pm.collectionVariables.get(\"bookingData\")), { bookingdates: { checkin: \"2031-03-12\", checkout: \"2031-03-15\" } }));",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Изменение только даты заезда\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 200 OK; checkin = 2031-03-12, checkout не изменился (2031-03-15)\n\n**Баг:** BUG-02 (см. bug-report.xlsx). Фактически: 200 OK; checkout затёрт: \"0NaN-aN-aN\"",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookingdates\": {\n        \"checkin\": \"2031-03-12\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PATCH-04 Пустое тело запроса",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 200\", () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Content-Type — application/json\", () => {",
+									"    pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"application/json\");",
+									"});",
+									"",
+									"pm.test(\"Тело ответа совпадает с ожидаемыми данными брони\", () => {",
+									"    pm.expect(pm.response.json()).to.eql(Object.assign(JSON.parse(pm.collectionVariables.get(\"bookingData\")), {}));",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"GET возвращает обновлённые данные\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(Object.assign(JSON.parse(pm.collectionVariables.get(\"bookingData\")), {}));",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Пустое тело запроса\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 200 OK; бронь не изменилась\n\n**Статус последнего прогона:** Passed",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PATCH-05 Изменение без авторизации",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"Код ответа 403\", () => {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Изменение без авторизации\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 403 Forbidden; бронь не изменилась (GET возвращает исходные данные)\n\n**Статус последнего прогона:** Passed",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"NoAuth\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PATCH-06 Невалидный токен",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"Код ответа 403\", () => {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token=invalidtoken123"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Невалидный токен\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 403 Forbidden; бронь не изменилась (GET возвращает исходные данные)\n\n**Статус последнего прогона:** Passed",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"BadToken\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PATCH-07 Изменение несуществующей брони",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-17] Код ответа 404\", () => {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/99999999",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"99999999"
+							]
+						},
+						"description": "**Негативный кейс.** Изменение несуществующей брони\n\n**Предусловия:** Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 404 Not Found\n\n**Баг:** BUG-17 (см. bug-report.xlsx). Фактически: 405 Method Not Allowed",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": \"Ghost\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PATCH-08 firstname — число вместо строки",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"[BUG-10] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"[BUG-10] Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** firstname — число вместо строки\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 400 Bad Request; бронь не изменилась (GET возвращает исходные данные)\n\n**Баг:** BUG-10 (см. bug-report.xlsx). Фактически: 200 OK; сохранено число firstname = 123",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": 123\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PATCH-09 firstname = null",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"[BUG-11] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"[BUG-11] Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** firstname = null\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 400 Bad Request; бронь не изменилась (GET возвращает исходные данные)\n\n**Баг:** BUG-11 (см. bug-report.xlsx). Фактически: 200 OK; firstname = null",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"firstname\": null\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PATCH-10 totalprice — нечисловая строка",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"[BUG-07] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"[BUG-07] Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** totalprice — нечисловая строка\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 400 Bad Request; бронь не изменилась (GET возвращает исходные данные)\n\n**Баг:** BUG-07 (см. bug-report.xlsx). Фактически: 200 OK; totalprice = null",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"totalprice\": \"abc\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PATCH-11 Дата выезда раньше даты заезда",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"[BUG-06] Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"[BUG-06] Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Дата выезда раньше даты заезда\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 400 Bad Request; бронь не изменилась (GET возвращает исходные данные)\n\n**Баг:** BUG-06 (см. bug-report.xlsx). Фактически: 200 OK; бронь обновлена с checkout < checkin",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookingdates\": {\n        \"checkin\": \"2031-12-31\",\n        \"checkout\": \"2031-01-01\"\n    }\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PATCH-12 Поле bookingid в теле запроса",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Свободный id, который подставляется в поле bookingid тела запроса",
+									"pm.variables.set(\"targetBookingId\", 1000000000 + Math.floor(Math.random() * 100000000));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-01] Код ответа 200 или 400\", () => {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200,400]);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"[BUG-01] Бронь доступна по исходному id (GET → 200)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"    });",
+									"});",
+									"",
+									"// Уборка: бронь, «переехавшую» на targetBookingId, удаляем",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.variables.get(\"targetBookingId\"),",
+									"    method: \"DELETE\",",
+									"    header: { Authorization: \"Basic \" + btoa(pm.variables.get(\"username\") + \":\" + pm.variables.get(\"password\")) }",
+									"}, () => {});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Поле bookingid в теле запроса\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 400 Bad Request либо поле bookingid игнорируется; id брони не меняется, бронь доступна по исходному id\n\n**Баг:** BUG-01 (см. bug-report.xlsx). Фактически: 405 Method Not Allowed, но изменение применено: по исходному id 404, бронь доступна по id из тела",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"bookingid\": {{targetBookingId}}\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-PATCH-13 Невалидный JSON в теле запроса",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"const original = JSON.parse(pm.collectionVariables.get(\"bookingData\"));",
+									"",
+									"pm.test(\"Код ответа 400\", () => {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"Бронь не изменилась (GET возвращает исходные данные)\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"        pm.expect(res.json()).to.eql(original);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							},
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Невалидный JSON в теле запроса\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 400 Bad Request; бронь не изменилась (GET возвращает исходные данные)\n\n**Статус последнего прогона:** Passed",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\"firstname\": \"Patched\",",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Предусловие: новая бронь перед каждым запросом папки",
+							"const booking = {",
+							"    \"firstname\": \"Ivan\",",
+							"    \"lastname\": \"Petrov\",",
+							"    \"totalprice\": 150,",
+							"    \"depositpaid\": true,",
+							"    \"bookingdates\": {",
+							"        \"checkin\": \"2031-03-10\",",
+							"        \"checkout\": \"2031-03-15\"",
+							"    },",
+							"    \"additionalneeds\": \"Breakfast\"",
+							"};",
+							"pm.sendRequest({",
+							"    url: pm.variables.get(\"baseUrl\") + \"/booking\",",
+							"    method: \"POST\",",
+							"    header: { \"Content-Type\": \"application/json\", Accept: \"application/json\" },",
+							"    body: { mode: \"raw\", raw: JSON.stringify(booking) }",
+							"}, (err, res) => {",
+							"    if (err || res.code !== 200) {",
+							"        throw new Error(\"Предусловие: не удалось создать бронь — \" + (err || res.code));",
+							"    }",
+							"    pm.collectionVariables.set(\"bookingId\", res.json().bookingid);",
+							"    pm.collectionVariables.set(\"bookingData\", JSON.stringify(booking));",
+							"});",
+							"",
+							"// Предусловие: свежий токен авторизации",
+							"pm.sendRequest({",
+							"    url: pm.variables.get(\"baseUrl\") + \"/auth\",",
+							"    method: \"POST\",",
+							"    header: { \"Content-Type\": \"application/json\" },",
+							"    body: {",
+							"        mode: \"raw\",",
+							"        raw: JSON.stringify({ username: pm.variables.get(\"username\"), password: pm.variables.get(\"password\") })",
+							"    }",
+							"}, (err, res) => {",
+							"    if (err || !res.json().token) {",
+							"        throw new Error(\"Предусловие: не удалось получить токен\");",
+							"    }",
+							"    pm.collectionVariables.set(\"token\", res.json().token);",
+							"});"
+						]
+					}
+				}
+			]
+		},
+		{
+			"name": "/booking/:id (DELETE)",
+			"description": "Удаление брони. Перед каждым запросом создаётся новая бронь и запрашивается токен.",
+			"item": [
+				{
+					"name": "TC-DEL-01 Удаление брони с токеном в Cookie",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-18] Код ответа 200 или 204\", () => {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200,204]);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"Бронь удалена: GET → 404\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(404);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Удаление брони с токеном в Cookie\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён; Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 200 OK (или 204 No Content); GET /booking/{id} → 404 Not Found\n\n**Баг:** BUG-18 (см. bug-report.xlsx). Фактически: 201 Created; бронь удалена (GET → 404)",
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-DEL-02 Удаление брони с Basic-авторизацией",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-18] Код ответа 200 или 204\", () => {",
+									"    pm.expect(pm.response.code).to.be.oneOf([200,204]);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"Бронь удалена: GET → 404\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(404);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Позитивный кейс.** Удаление брони с Basic-авторизацией\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 200 OK (или 204 No Content); GET /booking/{id} → 404 Not Found\n\n**Баг:** BUG-18 (см. bug-report.xlsx). Фактически: 201 Created; бронь удалена (GET → 404)",
+						"auth": {
+							"type": "basic",
+							"basic": [
+								{
+									"key": "username",
+									"value": "{{username}}",
+									"type": "string"
+								},
+								{
+									"key": "password",
+									"value": "{{password}}",
+									"type": "string"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-DEL-03 Удаление без авторизации",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 403\", () => {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"Бронь не удалена: GET → 200\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Удаление без авторизации\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 403 Forbidden; бронь не удалена (GET → 200 OK)\n\n**Статус последнего прогона:** Passed"
+					},
+					"response": []
+				},
+				{
+					"name": "TC-DEL-04 Невалидный токен",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Код ответа 403\", () => {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    header: { Accept: \"application/json\" }",
+									"}, (err, res) => {",
+									"    pm.test(\"Бронь не удалена: GET → 200\", () => {",
+									"        pm.expect(err).to.be.null;",
+									"        pm.expect(res.code).to.eql(200);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "token=invalidtoken123"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Невалидный токен\n\n**Предусловия:** Создана бронь (POST /booking с валидными данными, additionalneeds = Breakfast), её id сохранён\n\n**Ожидаемый результат:** 403 Forbidden; бронь не удалена (GET → 200 OK)\n\n**Статус последнего прогона:** Passed",
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-DEL-05 Удаление несуществующей брони",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-17] Код ответа 404\", () => {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/99999999",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"99999999"
+							]
+						},
+						"description": "**Негативный кейс.** Удаление несуществующей брони\n\n**Предусловия:** Получен токен: POST /auth с admin / password123\n\n**Ожидаемый результат:** 404 Not Found\n\n**Баг:** BUG-17 (см. bug-report.xlsx). Фактически: 405 Method Not Allowed",
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "TC-DEL-06 Повторное удаление уже удалённой брони",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Предусловие: бронь уже удалена",
+									"pm.sendRequest({",
+									"    url: pm.variables.get(\"baseUrl\") + \"/booking/\" + pm.collectionVariables.get(\"bookingId\"),",
+									"    method: \"DELETE\",",
+									"    header: { Cookie: \"token=\" + pm.collectionVariables.get(\"token\") }",
+									"}, (err, res) => {",
+									"    if (err || res.code >= 300) {",
+									"        throw new Error(\"Предусловие: не удалось удалить бронь — \" + (err || res.code));",
+									"    }",
+									"});"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"[BUG-17] Код ответа 404\", () => {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "token={{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/booking/{{bookingId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"booking",
+								"{{bookingId}}"
+							]
+						},
+						"description": "**Негативный кейс.** Повторное удаление уже удалённой брони\n\n**Предусловия:** Получен токен: POST /auth с admin / password123; Бронь создана и удалена (DELETE /booking/{id})\n\n**Ожидаемый результат:** 404 Not Found\n\n**Баг:** BUG-17 (см. bug-report.xlsx). Фактически: 405 Method Not Allowed",
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"response": []
+				}
+			],
+			"event": [
+				{
+					"listen": "prerequest",
+					"script": {
+						"type": "text/javascript",
+						"exec": [
+							"// Предусловие: новая бронь перед каждым запросом папки",
+							"const booking = {",
+							"    \"firstname\": \"Ivan\",",
+							"    \"lastname\": \"Petrov\",",
+							"    \"totalprice\": 150,",
+							"    \"depositpaid\": true,",
+							"    \"bookingdates\": {",
+							"        \"checkin\": \"2031-03-10\",",
+							"        \"checkout\": \"2031-03-15\"",
+							"    },",
+							"    \"additionalneeds\": \"Breakfast\"",
+							"};",
+							"pm.sendRequest({",
+							"    url: pm.variables.get(\"baseUrl\") + \"/booking\",",
+							"    method: \"POST\",",
+							"    header: { \"Content-Type\": \"application/json\", Accept: \"application/json\" },",
+							"    body: { mode: \"raw\", raw: JSON.stringify(booking) }",
+							"}, (err, res) => {",
+							"    if (err || res.code !== 200) {",
+							"        throw new Error(\"Предусловие: не удалось создать бронь — \" + (err || res.code));",
+							"    }",
+							"    pm.collectionVariables.set(\"bookingId\", res.json().bookingid);",
+							"    pm.collectionVariables.set(\"bookingData\", JSON.stringify(booking));",
+							"});",
+							"",
+							"// Предусловие: свежий токен авторизации",
+							"pm.sendRequest({",
+							"    url: pm.variables.get(\"baseUrl\") + \"/auth\",",
+							"    method: \"POST\",",
+							"    header: { \"Content-Type\": \"application/json\" },",
+							"    body: {",
+							"        mode: \"raw\",",
+							"        raw: JSON.stringify({ username: pm.variables.get(\"username\"), password: pm.variables.get(\"password\") })",
+							"    }",
+							"}, (err, res) => {",
+							"    if (err || !res.json().token) {",
+							"        throw new Error(\"Предусловие: не удалось получить токен\");",
+							"    }",
+							"    pm.collectionVariables.set(\"token\", res.json().token);",
+							"});"
+						]
+					}
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Общая проверка для всех запросов коллекции",
+					"pm.test(\"Время ответа < 3000 мс\", () => {",
+					"    pm.expect(pm.response.responseTime).to.be.below(3000);",
+					"});"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "https://restful-booker.herokuapp.com"
+		},
+		{
+			"key": "username",
+			"value": "admin"
+		},
+		{
+			"key": "password",
+			"value": "password123"
+		},
+		{
+			"key": "bookingSchema",
+			"value": "{\"type\":\"object\",\"required\":[\"firstname\",\"lastname\",\"totalprice\",\"depositpaid\",\"bookingdates\"],\"properties\":{\"firstname\":{\"type\":\"string\"},\"lastname\":{\"type\":\"string\"},\"totalprice\":{\"type\":\"number\"},\"depositpaid\":{\"type\":\"boolean\"},\"bookingdates\":{\"type\":\"object\",\"required\":[\"checkin\",\"checkout\"],\"properties\":{\"checkin\":{\"type\":\"string\",\"pattern\":\"^\\\\d{4}-\\\\d{2}-\\\\d{2}$\"},\"checkout\":{\"type\":\"string\",\"pattern\":\"^\\\\d{4}-\\\\d{2}-\\\\d{2}$\"}}},\"additionalneeds\":{\"type\":\"string\"}}}"
+		},
+		{
+			"key": "token",
+			"value": ""
+		},
+		{
+			"key": "bookingId",
+			"value": ""
+		},
+		{
+			"key": "bookingData",
+			"value": ""
+		},
+		{
+			"key": "searchFirstname",
+			"value": ""
+		},
+		{
+			"key": "searchLastname",
+			"value": ""
+		}
+	]
+}
